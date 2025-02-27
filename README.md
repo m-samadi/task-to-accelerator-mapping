@@ -1,5 +1,5 @@
 # Task-to-accelerator mapping
-This simulator performs the task-to-accelerator mapping of OpenMP-based applications using heuristics and multi-criteria decision analysis.
+This simulator performs the task-to-accelerator mapping of OpenMP applications using heuristics and multi-criteria decision analysis.
 <br/>
 <br/>
 ## Specification
