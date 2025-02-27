@@ -1,0 +1,7 @@
+max_num_tasks = {100, 200, 300, 400, 500}
+ran_pro = 0.03
+type_pro = 0.99
+et_min = 1
+et_max = 10
+num_cpu_threads = 32
+num_gpu_devices = 8
