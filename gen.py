@@ -1,25 +1,26 @@
- #**************************************************************************
- # gen.py
- #
- # Generate the graph based on a predefined structure or randomly,
- # as well as determine execution time of the tasks, the deadline of the
- # system, and response time of the tasks.
- #**************************************************************************
- # Copyright 2025 Instituto Superior de Engenharia do Porto
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #              http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
- #**************************************************************************
+#**************************************************************************
+# main.py
+#
+# This simulator performs task-to-accelerator mapping in OpenMP
+# applications.
+#**************************************************************************
+# Copyright 2025 Instituto Superior de Engenharia do Porto
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#              http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#**************************************************************************
+import func
 import random
+import math
 
 out_list = [] # Outgoing tasks
 
@@ -236,7 +237,7 @@ def read_gpu_task(bench_name, gpu_task_num):
 
 # Specify execution time of the tasks, as well as calculate the deadline of the system #
 # and response time of the tasks #
-def specify_et(graph_type, num_tasks, task_list, bench_name, et_min, et_max, et_type, itr_et, dl_min_task, dl_max_task, dl_min_graph, dl_max_graph, gpu_task_num):
+def specify_et(graph_type, num_tasks, task_list, bench_name, et_min, et_max, et_type, itr_et, dl_min_task, dl_max_task, num_cpu_threads, gpu_task_num):
 	if graph_type == 'y':
 		# Determine an execution time for each task based on the json file #
 		tdg_st_line_num = [] # The starting line number of each task
@@ -268,8 +269,9 @@ def specify_et(graph_type, num_tasks, task_list, bench_name, et_min, et_max, et_
 			for j in range (st_line_num, fn_line_num):
 				# Check whether execution total time exists in the current line #
 				if (lines_json[j].find('execution_total_time') != -1):
-					sp_line = lines_json[j].split(':') # Split the line
-					et = int(sp_line[1].strip()) # Fetch the execution total time from the line
+					sp_line1 = lines_json[j].split(':') # Split the line
+					sp_line2 = sp_line1[1].split(',') # Split the line
+					et = int(sp_line2[0].strip()) # Fetch the execution total time from the line
 					exe_list.append(et) # Add the execution time to the list
 
 			# Determine the execution time based on the minimum value #
@@ -387,12 +389,12 @@ def specify_et(graph_type, num_tasks, task_list, bench_name, et_min, et_max, et_
 			task_list[i].deadline = random.randint(dl_min_task, dl_max_task) * 10
 
 	# Determine the deadline of the system #
+	deadline = math.ceil(num_tasks / num_cpu_threads) * func.critical_path_length(num_tasks, task_list)
+
+	# Calculate response time of the tasks #
 	sum_et = 0
 	for i in range(num_tasks):
 		sum_et += task_list[i].exe_time
-	deadline = random.randint(dl_min_graph, dl_max_graph) * sum_et
-
-	# Calculate response time of the tasks #
 	for i in range(num_tasks):
 		task_list[i].res_time = round(deadline * task_list[i].exe_time / sum_et)
 

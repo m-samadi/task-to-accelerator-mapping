@@ -1,25 +1,25 @@
- #**************************************************************************
- # O_KGLP.py
- #
- # Map the tasks of the graph using the enhanced O-KGLP method pressented in
- # the following paper:
- # "An optimal k-exclusion real-time locking protocol motivated by
- # multi-GPU systems"
- #**************************************************************************
- # Copyright 2025 Instituto Superior de Engenharia do Porto
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #              http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
- #**************************************************************************
+#**************************************************************************
+# main.py
+#
+# This file performs task-to-accelerator mapping in OpenMP applications
+# using the Optimal k-Exclusion Global Locking Protocol (O-KGLP) avaliable
+# below:
+# https://link.springer.com/article/10.1007/s11241-012-9170-0
+#**************************************************************************
+# Copyright 2025 Instituto Superior de Engenharia do Porto
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#              http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#**************************************************************************
 from operator import itemgetter
 import func
 

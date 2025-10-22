@@ -1,23 +1,26 @@
- #**************************************************************************
- # func.py
- #
- # This file includes the common functions that are used by different files.
- #**************************************************************************
- # Copyright 2025 Instituto Superior de Engenharia do Porto
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #              http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
- #**************************************************************************
+#**************************************************************************
+# main.py
+#
+# This simulator performs task-to-accelerator mapping in OpenMP
+# applications.
+#**************************************************************************
+# Copyright 2025 Instituto Superior de Engenharia do Porto
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#              http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#**************************************************************************
 from PIL import Image, ImageDraw, ImageFont
+
+path_length = [] # Length of all paths in the graph
 
 # Clear the detailed contents of the tasks #
 def clear(num_tasks, task_list):
@@ -72,7 +75,7 @@ def miss_deadline(deadline, t):
 # Export the scheduling of the threads to the files #
 def export_scheduling(num_threads, queue, alg_name, par1, par2, par3, par4, par5):
 	# Create the output file #
-	if alg_name == 'O-KGLP':
+	if alg_name == 'O-KGLP' or 'Baseline':
 		file = open("output/scheduling/" + par1 + "-" + par2 + "," + alg_name + ".dat", "w")
 	elif alg_name == 'new':
 		file = open("output/scheduling/" + par1 + "-" + par2 + "," + par3 + "-" + par4 + "-" + par5 + ".dat", "w")
@@ -93,7 +96,7 @@ def export_scheduling(num_threads, queue, alg_name, par1, par2, par3, par4, par5
 # Export the allocation of devices to tasks to the file #
 def export_device_allocation(alloc_list, alg_name, par1, par2, par3, par4, par5):
 	# Create the output file #
-	if alg_name == 'O-KGLP':
+	if alg_name == 'O-KGLP' or 'Baseline':
 		file = open("output/device allocation/" + par1 + "-" + par2 + "," + alg_name + ".dat", "w")
 	elif alg_name == 'new':
 		file = open("output/device allocation/" + par1 + "-" + par2 + "," + par3 + "-" + par4 + "-" + par5 + ".dat", "w")
@@ -148,7 +151,121 @@ def graphic_result(num_threads, queue, t, alg_name, par1, par2, par3, par4, par5
 		l_point += 110
 
 	# Create the output file #
-	if alg_name == 'O-KGLP':
+	if alg_name == 'O-KGLP' or 'Baseline':
 		im.save("output/graphic/" + par1 + "-" + par2 + "," + alg_name + ".jpg", quality = 300)
 	elif alg_name == 'new':
 		im.save("output/graphic/" + par1 + "-" + par2 + "," + par3 + "-" + par4 + "-" + par5 + ".jpg", quality = 300)
+
+# Calculate the length of the critical path #
+def critical_path_length(num_tasks, task_list):
+	global path_length
+
+	'''
+	for i in range(num_tasks):
+		dep = []
+		for j in range(len(task_list[i].dep)):
+			dep.append(task_list[i].dep[j].t_id)
+		if len(dep) == 0:
+			print(i)
+		else:
+			for k in range(len(dep)):
+				print(str(dep[k]) + " -> " + str(i))
+	'''
+
+	# Specify source nodes #
+	source = []
+	for i in range(num_tasks):
+		if len(task_list[i].dep) == 0:
+			source.append(i)
+
+	# Specify sink nodes #
+	sink = []
+	for i in range(num_tasks):
+		dep = []
+		for j in range(num_tasks):
+			for k in range(len(task_list[j].dep)):
+				dep.append(task_list[j].dep[k].t_id)
+		if i not in dep:
+			sink.append(i)
+
+	# Determine graph connectivity #
+	conn = [([0]*num_tasks) for i in range(num_tasks)]
+	for i in range(num_tasks):
+		for j in range(len(task_list[i].dep)):
+			conn[task_list[i].dep[j].t_id][i] = 1
+
+	# Calculate the length of all paths #
+	path_length = []
+	for i in range(len(source)):
+		path_length_calc(num_tasks, task_list, conn, task_list[source[i]].exe_time, source[i])
+		#path_discovery(num_tasks, conn, str(source[i]), source[i])
+
+	return max(path_length)
+
+# Calculate the length of all paths in the graph #
+def path_length_calc(num_tasks, task_list, conn, length, task_id):
+	global path_length
+
+	flag = False
+	for i in range(num_tasks):
+		if conn[task_id][i] == 1:
+			path_length_calc(num_tasks, task_list, conn, length + task_list[i].exe_time, i)
+			flag = True
+	
+	if flag == False:
+		path_length.append(length)
+
+# Discover all paths in the graph #
+def path_discovery(num_tasks, conn, path, task_id):
+	flag = False
+	for i in range(num_tasks):
+		if conn[task_id][i] == 1:
+			path_discovery(num_tasks, conn, path + ", " + str(i), i)
+			flag = True
+	
+	if flag == False:
+		print(path)
+
+# Export graph specification to JSON file #
+def export_json(num_tasks, task_list):
+	file = open("output/dag.dat", "w")
+
+	file.write("digraph TDG {" + "\n")
+	file.write("   compound=true" + "\n")
+	file.write("   subgraph cluster_0 {" + "\n")
+	file.write("      label=TDG_main" + "\n")
+
+	for i in range(num_tasks):
+		if task_list[i].t_type == 0:
+			file.write("      " + str(i) + "[color=blue,style=bold]" + "\n")
+		else:
+			file.write("      " + str(i) + "[color=red,style=bold]" + "\n")
+	
+	file.write("   }" + "\n")
+
+	for i in range(num_tasks):
+		dep = []
+		for j in range(len(task_list[i].dep)):
+			dep.append(task_list[i].dep[j].t_id)
+		if len(dep) == 0:
+			file.write("   " + str(i) + "\n")
+		else:
+			for k in range(len(dep)):
+				file.write("   " + str(dep[k]) + " -> " + str(i) + "\n")
+
+	file.write("   node [shape=plaintext];" + "\n")
+	file.write("    subgraph cluster_1000 {" + "\n")
+	file.write('      label="User functions:"; style="rounded";' + "\n")
+	file.write(' user_funcs [label=<<table border="0" cellspacing="10" cellborder="0">' + "\n")
+	file.write("      <tr>" + "\n")
+	file.write('         <td bgcolor="aquamarine3" width="15px" border="1"></td>' + "\n")
+	file.write("         <td>;axpy.c;saxpy;37;13;;</td>" + "\n")
+	file.write("      </tr>" + "\n")
+	file.write("      <tr>" + "\n")
+	file.write('         <td bgcolor="crimson" width="15px" border="1"></td>' + "\n")
+	file.write("         <td>;axpy.c;saxpy;58;13;;</td>" + "\n")
+	file.write("      </tr>" + "\n")
+	file.write("      </table>>]" + "\n")
+	file.write("}}" + "\n")
+
+	file.close()

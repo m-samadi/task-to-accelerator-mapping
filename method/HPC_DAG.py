@@ -1,8 +1,10 @@
 #**************************************************************************
-# main.py
+# HPC_DAG.py
 #
 # This file performs task-to-accelerator mapping in OpenMP applications
-# using the proposed method.
+# using the Heterogeneous Parallel Conditional Directed Acyclic Graph
+# (HPC-DAG) approach avaliable below:
+# https://ieeexplore.ieee.org/abstract/document/9194289
 #**************************************************************************
 # Copyright 2025 Instituto Superior de Engenharia do Porto
 #
@@ -223,51 +225,38 @@ def loc_queue_cap_check(num_gpu_devices, loc_queue_cap):
 	return dev_list
 
 # Select a task from the global queue using one of the GQ selection algorithms #
-def gpu_gq_sel_algorithm(gpu_gq_sel_alg):
+# based on Total Execution Time (TET) #
+def gpu_gq_sel_algorithm():
 	global glob_queue
 
-	# The LET algorithm #
-	if gpu_gq_sel_alg == 'LET':
-		sel_id = 0
-		# Find the job with the least execution time #
-		for i in range(len(glob_queue))[1::]:
-			if glob_queue[i].gpu_time < glob_queue[sel_id].gpu_time:
-				sel_id = i
-
-	# The MNAOT algorithm #
-	elif gpu_gq_sel_alg == 'MNAOT':
-		sel_id = 0
-		# Find the job with the maximum number of all outgoing tasks #
-		for i in range(len(glob_queue))[1::]:
-			if glob_queue[i].num_out > glob_queue[sel_id].num_out:
-				sel_id = i
-
-	# The WSM algorithm #
-	elif gpu_gq_sel_alg == 'WSM':
-		# Calculate the weighted sum of each job #
-		wsm = []
-		for i in range(len(glob_queue)):
-			if glob_queue[i].num_out != 0:
-				wsm.append(et_w * glob_queue[i].gpu_time + naot_w * 1 / glob_queue[i].num_out)
-			else:
-				wsm.append(et_w * glob_queue[i].gpu_time + naot_w)
-
-		# Select the job with the least value #
-		sel_id = 0
-		for i in range(len(glob_queue))[1::]:
-			if wsm[i] < wsm[sel_id]:
-				sel_id = i
+	sel_id = 0
+	# Find the job with the lowest total execution time #
+	for i in range(len(glob_queue))[1::]:
+		if glob_queue[i].gpu_time < glob_queue[sel_id].gpu_time:
+			sel_id = i
 
 	return sel_id
 
 # Select a local queue using one of the LQ allocation algorithms #
+# based on Best-Fit (BF) or Worst-Fit (WF) #
 def gpu_lq_alloc_algorithm(dev_list, gpu_lq_alloc_alg):
 	global loc_queue
 
 	dev_list_new = [] # The device information
 
-	# The MNJ algorithm #
-	if gpu_lq_alloc_alg == 'MNJ':
+	# The BF algorithm #
+	if gpu_lq_alloc_alg == 'BF':
+		# Determine the number of jobs in the selected queues #
+		for i in range(len(dev_list)):
+			dev_list_new.append([dev_list[i], len(loc_queue[dev_list[i]])])
+
+		# Sort the list based on the maximum number of jobs #
+		dev_list_new = sorted(dev_list_new, key = itemgetter(1), reverse = True)
+
+		return dev_list_new[0][0]
+
+	# The WF algorithm #
+	elif gpu_lq_alloc_alg == 'WF':
 		# Determine the number of jobs in the selected queues #
 		for i in range(len(dev_list)):
 			dev_list_new.append([dev_list[i], len(loc_queue[dev_list[i]])])
@@ -277,69 +266,15 @@ def gpu_lq_alloc_algorithm(dev_list, gpu_lq_alloc_alg):
 
 		return dev_list_new[0][0]
 
-	# The LTET algorithm #
-	elif gpu_lq_alloc_alg == 'LTET':
-		# Calculate the total execution time of the selected queues #
-		for i in range(len(dev_list)):
-			total_et = 0
-			for j in range(len(loc_queue[dev_list[i]])):
-				total_et += loc_queue[dev_list[i]][j].gpu_time
-
-			dev_list_new.append([dev_list[i], total_et])
-
-		# Sort the list based on the least total execution time #
-		dev_list_new = sorted(dev_list_new, key = itemgetter(1), reverse = False)
-
-		return dev_list_new[0][0]
-
-	# The WSM algorithm #
-	elif gpu_lq_alloc_alg == 'WSM':
-		# Calculate the weighted sum of the selected queues #
-		for i in range(len(dev_list)):
-			total_et = 0
-			for j in range(len(loc_queue[dev_list[i]])):
-				total_et += loc_queue[dev_list[i]][j].gpu_time
-
-			dev_list_new.append([dev_list[i], nj_w * len(loc_queue[dev_list[i]]) + tet_w * total_et])
-
-		# Sort the list based on the least value #
-		dev_list_new = sorted(dev_list_new, key = itemgetter(1), reverse = False)
-
-		return dev_list_new[0][0]
-
 # Choose a task from the local queue using one of the LQ dispatching algorithms #
-def gpu_lq_disp_algorithm(queue, gpu_lq_disp_alg):
-	# The LET algorithm #
-	if gpu_lq_disp_alg == 'LET':
-		sel_id = 0
-		# Find the job with the least execution time #
-		for i in range(len(queue))[1::]:
-			if queue[i].gpu_time < queue[sel_id].gpu_time:
-				sel_id = i
+# based on Total Execution Time (TET) #
+def gpu_lq_disp_algorithm(queue):
 
-	# The MNAOT algorithm #
-	elif gpu_lq_disp_alg == 'MNAOT':
-		sel_id = 0
-		# Find the job with the maximum number of all outgoing tasks #
-		for i in range(len(queue))[1::]:
-			if queue[i].num_out > queue[sel_id].num_out:
-				sel_id = i
-
-	# The WSM algorithm #
-	elif gpu_lq_disp_alg == 'WSM':
-		# Calculate the weighted sum of each job #
-		wsm = []
-		for i in range(len(queue)):
-			if queue[i].num_out != 0:
-				wsm.append(et_w * queue[i].gpu_time + naot_w * 1 / queue[i].num_out)
-			else:
-				wsm.append(et_w * queue[i].gpu_time + naot_w)
-
-		# Select the job with the least value #
-		sel_id = 0
-		for i in range(len(queue))[1::]:
-			if wsm[i] < wsm[sel_id]:
-				sel_id = i
+	sel_id = 0
+	# Find the job with the lowest total execution time #
+	for i in range(len(queue))[1::]:
+		if queue[i].gpu_time < queue[sel_id].gpu_time:
+			sel_id = i
 
 	return sel_id
 
@@ -499,7 +434,7 @@ def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 
 					# Select a task from the global queue, allocate it to one of the local queues, #
 					# and then remove it from the global queue #
-					task = glob_queue[gpu_gq_sel_algorithm(gpu_gq_sel_alg)]
+					task = glob_queue[gpu_gq_sel_algorithm()]
 					loc_queue_id = gpu_lq_alloc_algorithm(dev_list, gpu_lq_alloc_alg)
 					loc_queue[loc_queue_id].append(task)
 
@@ -512,7 +447,7 @@ def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 				# Check the local queue of the device and dispatch one of the tasks (if any) to it #
 				if bool(loc_queue[dev_num]):
 					# Choose one of the tasks from the local queue #
-					sel_task = loc_queue[dev_num][gpu_lq_disp_algorithm(loc_queue[dev_num], gpu_lq_disp_alg)]
+					sel_task = loc_queue[dev_num][gpu_lq_disp_algorithm(loc_queue[dev_num])]
 
 					# Remove the task from the local queue #
 					loc_queue[dev_num].remove(sel_task)

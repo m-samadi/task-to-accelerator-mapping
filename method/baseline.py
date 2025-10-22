@@ -1,8 +1,8 @@
 #**************************************************************************
-# main.py
+# baseline.py
 #
 # This file performs task-to-accelerator mapping in OpenMP applications
-# using the proposed method.
+# using a baseline approach.
 #**************************************************************************
 # Copyright 2025 Instituto Superior de Engenharia do Porto
 #
@@ -222,129 +222,8 @@ def loc_queue_cap_check(num_gpu_devices, loc_queue_cap):
 
 	return dev_list
 
-# Select a task from the global queue using one of the GQ selection algorithms #
-def gpu_gq_sel_algorithm(gpu_gq_sel_alg):
-	global glob_queue
-
-	# The LET algorithm #
-	if gpu_gq_sel_alg == 'LET':
-		sel_id = 0
-		# Find the job with the least execution time #
-		for i in range(len(glob_queue))[1::]:
-			if glob_queue[i].gpu_time < glob_queue[sel_id].gpu_time:
-				sel_id = i
-
-	# The MNAOT algorithm #
-	elif gpu_gq_sel_alg == 'MNAOT':
-		sel_id = 0
-		# Find the job with the maximum number of all outgoing tasks #
-		for i in range(len(glob_queue))[1::]:
-			if glob_queue[i].num_out > glob_queue[sel_id].num_out:
-				sel_id = i
-
-	# The WSM algorithm #
-	elif gpu_gq_sel_alg == 'WSM':
-		# Calculate the weighted sum of each job #
-		wsm = []
-		for i in range(len(glob_queue)):
-			if glob_queue[i].num_out != 0:
-				wsm.append(et_w * glob_queue[i].gpu_time + naot_w * 1 / glob_queue[i].num_out)
-			else:
-				wsm.append(et_w * glob_queue[i].gpu_time + naot_w)
-
-		# Select the job with the least value #
-		sel_id = 0
-		for i in range(len(glob_queue))[1::]:
-			if wsm[i] < wsm[sel_id]:
-				sel_id = i
-
-	return sel_id
-
-# Select a local queue using one of the LQ allocation algorithms #
-def gpu_lq_alloc_algorithm(dev_list, gpu_lq_alloc_alg):
-	global loc_queue
-
-	dev_list_new = [] # The device information
-
-	# The MNJ algorithm #
-	if gpu_lq_alloc_alg == 'MNJ':
-		# Determine the number of jobs in the selected queues #
-		for i in range(len(dev_list)):
-			dev_list_new.append([dev_list[i], len(loc_queue[dev_list[i]])])
-
-		# Sort the list based on the minimum number of jobs #
-		dev_list_new = sorted(dev_list_new, key = itemgetter(1), reverse = False)
-
-		return dev_list_new[0][0]
-
-	# The LTET algorithm #
-	elif gpu_lq_alloc_alg == 'LTET':
-		# Calculate the total execution time of the selected queues #
-		for i in range(len(dev_list)):
-			total_et = 0
-			for j in range(len(loc_queue[dev_list[i]])):
-				total_et += loc_queue[dev_list[i]][j].gpu_time
-
-			dev_list_new.append([dev_list[i], total_et])
-
-		# Sort the list based on the least total execution time #
-		dev_list_new = sorted(dev_list_new, key = itemgetter(1), reverse = False)
-
-		return dev_list_new[0][0]
-
-	# The WSM algorithm #
-	elif gpu_lq_alloc_alg == 'WSM':
-		# Calculate the weighted sum of the selected queues #
-		for i in range(len(dev_list)):
-			total_et = 0
-			for j in range(len(loc_queue[dev_list[i]])):
-				total_et += loc_queue[dev_list[i]][j].gpu_time
-
-			dev_list_new.append([dev_list[i], nj_w * len(loc_queue[dev_list[i]]) + tet_w * total_et])
-
-		# Sort the list based on the least value #
-		dev_list_new = sorted(dev_list_new, key = itemgetter(1), reverse = False)
-
-		return dev_list_new[0][0]
-
-# Choose a task from the local queue using one of the LQ dispatching algorithms #
-def gpu_lq_disp_algorithm(queue, gpu_lq_disp_alg):
-	# The LET algorithm #
-	if gpu_lq_disp_alg == 'LET':
-		sel_id = 0
-		# Find the job with the least execution time #
-		for i in range(len(queue))[1::]:
-			if queue[i].gpu_time < queue[sel_id].gpu_time:
-				sel_id = i
-
-	# The MNAOT algorithm #
-	elif gpu_lq_disp_alg == 'MNAOT':
-		sel_id = 0
-		# Find the job with the maximum number of all outgoing tasks #
-		for i in range(len(queue))[1::]:
-			if queue[i].num_out > queue[sel_id].num_out:
-				sel_id = i
-
-	# The WSM algorithm #
-	elif gpu_lq_disp_alg == 'WSM':
-		# Calculate the weighted sum of each job #
-		wsm = []
-		for i in range(len(queue)):
-			if queue[i].num_out != 0:
-				wsm.append(et_w * queue[i].gpu_time + naot_w * 1 / queue[i].num_out)
-			else:
-				wsm.append(et_w * queue[i].gpu_time + naot_w)
-
-		# Select the job with the least value #
-		sel_id = 0
-		for i in range(len(queue))[1::]:
-			if wsm[i] < wsm[sel_id]:
-				sel_id = i
-
-	return sel_id
-
 # The mapping process #
-def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_list, cpu_alloc_alg, cpu_disp_alg, gpu_gq_sel_alg, gpu_lq_alloc_alg, gpu_lq_disp_alg):
+def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_list, cpu_alloc_alg, cpu_disp_alg):
 	global task_stack, alloc_queue, exec_queue, wait_queue, curr_thr, last_idle, glob_queue, loc_queue, ker_exec_queue, task_device, comp_tasks_cnt
 
 	t = 0 # Response time
@@ -497,10 +376,11 @@ def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 				while bool(glob_queue) and bool(loc_queue_cap_check(num_gpu_devices, loc_queue_cap)):
 					dev_list = loc_queue_cap_check(num_gpu_devices, loc_queue_cap)
 
-					# Select a task from the global queue, allocate it to one of the local queues, #
+					# Select a task from the global queue using First-In, First-Out (FIFO), #
+					# allocate it to one of the local queues (i.e., first available queue), #
 					# and then remove it from the global queue #
-					task = glob_queue[gpu_gq_sel_algorithm(gpu_gq_sel_alg)]
-					loc_queue_id = gpu_lq_alloc_algorithm(dev_list, gpu_lq_alloc_alg)
+					task = glob_queue[0]
+					loc_queue_id = dev_list[0]
 					loc_queue[loc_queue_id].append(task)
 
 					task_device.append([task.t_id, loc_queue_id])
@@ -511,8 +391,8 @@ def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 			if not bool(ker_exec_queue[dev_num]) or ker_exec_queue[dev_num][len(ker_exec_queue[dev_num]) - 1].status == 'f_memcopy2' or ker_exec_queue[dev_num][len(ker_exec_queue[dev_num]) - 1].status == 's_cpu2' or ker_exec_queue[dev_num][len(ker_exec_queue[dev_num]) - 1].status == 'f_cpu2':
 				# Check the local queue of the device and dispatch one of the tasks (if any) to it #
 				if bool(loc_queue[dev_num]):
-					# Choose one of the tasks from the local queue #
-					sel_task = loc_queue[dev_num][gpu_lq_disp_algorithm(loc_queue[dev_num], gpu_lq_disp_alg)]
+					# Choose one of the tasks from the local queue using First-In, First-Out (FIFO) #
+					sel_task = loc_queue[dev_num][0]
 
 					# Remove the task from the local queue #
 					loc_queue[dev_num].remove(sel_task)
@@ -535,7 +415,7 @@ def mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 	return t
 
 # The main function #
-def execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_list, deadline, cpu_alloc_alg, cpu_disp_alg, gpu_gq_sel_alg, gpu_lq_alloc_alg, gpu_lq_disp_alg, graphic_result):
+def execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_list, deadline, cpu_alloc_alg, cpu_disp_alg, gpu_alg, graphic_result):
 	global task_stack, alloc_queue, exec_queue, wait_queue, last_idle, loc_queue, ker_exec_queue, task_device, comp_tasks_cnt
 
 	# Create the task stack and append the tasks to this list #
@@ -580,8 +460,8 @@ def execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 	comp_tasks_cnt = 0
 
 	# Show the mapping algorithm #
-	print('\n' + cpu_alloc_alg + '-' + cpu_disp_alg + ', ' + gpu_gq_sel_alg + '-' + gpu_lq_alloc_alg + '-' + gpu_lq_disp_alg + '\n------------------------------')
-	t = mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_list, cpu_alloc_alg, cpu_disp_alg, gpu_gq_sel_alg, gpu_lq_alloc_alg, gpu_lq_disp_alg)
+	print('\n' + cpu_alloc_alg + '-' + cpu_disp_alg + ', ' + gpu_alg + '\n------------------------------')
+	t = mapping(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_list, cpu_alloc_alg, cpu_disp_alg)
 
 	# Calculate the results #
 	response_time = t # The response time
@@ -592,14 +472,14 @@ def execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, task_lis
 	print('Missed deadline: ' + str(miss_deadline))
 
 	# Export the scheduling of the threads #
-	func.export_scheduling(num_cpu_threads, exec_queue, 'new', cpu_alloc_alg, cpu_disp_alg, gpu_gq_sel_alg, gpu_lq_alloc_alg, gpu_lq_disp_alg)
+	func.export_scheduling(num_cpu_threads, exec_queue, 'Baseline', cpu_alloc_alg, cpu_disp_alg, gpu_alg, '', '')
 
 	# Export the allocation of devices to tasks #
-	func.export_device_allocation(task_device, 'new', cpu_alloc_alg, cpu_disp_alg, gpu_gq_sel_alg, gpu_lq_alloc_alg, gpu_lq_disp_alg)
+	func.export_device_allocation(task_device, 'Baseline', cpu_alloc_alg, cpu_disp_alg, gpu_alg, '', '')
 
 	# Draw the graphical output #
 	if graphic_result == 1:
-		func.graphic_result(num_cpu_threads, exec_queue, t, 'new', cpu_alloc_alg, cpu_disp_alg, gpu_gq_sel_alg, gpu_lq_alloc_alg, gpu_lq_disp_alg)
+		func.graphic_result(num_cpu_threads, exec_queue, t, 'Baseline', cpu_alloc_alg, cpu_disp_alg, gpu_alg, '', '')
 
 	# Return the results to the main program #
 	return response_time, miss_deadline
