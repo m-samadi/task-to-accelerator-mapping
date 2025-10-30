@@ -6,8 +6,6 @@
 # below:
 # https://link.springer.com/article/10.1007/s11241-012-9170-0
 #**************************************************************************
-# Copyright 2025 Instituto Superior de Engenharia do Porto
-#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
