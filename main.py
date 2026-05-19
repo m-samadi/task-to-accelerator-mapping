@@ -25,21 +25,21 @@ from method import HPC_DAG
 from method import new
 
 # Global variables #
-max_num_tasks = 1250 # Maximum number of tasks [random case]
+max_num_tasks = 1000 # Maximum number of tasks [random case]
 num_tasks = 0 # Number of tasks [random case]
-bench_name = 'axpy' # The name of the benchmark
-ran_pro = 0.05 # Probability of selecting data dependencies between tasks [random case]
+bench_name = 'heat' # The name of the benchmark
+ran_pro = 0.01 # Probability of selecting data dependencies between tasks [random case]
 type_pro = 0.99 # The probability to specify the task type [random case]
-itr_et = 10 # Number of iterations for execution time generation [random case]
+itr_et = 3 # Number of iterations for execution time generation [random case]
 et_min = 1 # Minimum execution time [random case]
-et_max = 50 # Maximum execution time [random case]
+et_max = 10 # Maximum execution time [random case]
 et_type = 'max' # The type of execution time generation; min: Minimum, avg: Average, max: Maximum
 dl_min_task = 1 # Minimum probability for determining the deadline of the task
 dl_max_task = 5 # Maximum probability for determining the deadline of the task
-itr_prg = 100 # Number of iterations for the program
-num_cpu_threads = 64 # Number of CPU threads
+itr_prg = 1 # Number of iterations for the program
+num_cpu_threads = 4 # Number of CPU threads
 gpu_task_num = [] # GPU-using task number (the index starts from 0)
-num_gpu_devices = 8 # Number of GPU devices
+num_gpu_devices = 2 # Number of GPU devices
 loc_queue_cap = math.ceil(num_cpu_threads / num_gpu_devices) # Capacity of the local queues of GPU devices
 graphic_result = 0 # Graphical output; 0: Not show, 1: Show
 
@@ -94,27 +94,96 @@ for i in range(itr_prg):
 	# MTET-MET, TET-WF-TET #
 	results.append(HPC_DAG.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'TET', 'WF', 'TET', graphic_result))
 
-	# MTET-MET, LET-MNJ-MNAOT #
-	#results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'MNJ', 'MNAOT', graphic_result))
+	# MTET-MET, LET-LTET-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'LTET', 'LET', graphic_result))
 
 	# MTET-MET, LET-LTET-MNAOT #
 	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'LTET', 'MNAOT', graphic_result))
 
+	# MTET-MET, LET-LTET-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'LTET', 'WSM', graphic_result))
+
+	# MTET-MET, LET-MNJ-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'MNJ', 'LET', graphic_result))
+
+	# MTET-MET, LET-MNJ-MNAOT #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'MNJ', 'MNAOT', graphic_result))
+
+	# MTET-MET, LET-MNJ-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'MNJ', 'WSM', graphic_result))
+
+	# MTET-MET, LET-WSM-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'WSM', 'LET', graphic_result))
+
 	# MTET-MET, LET-WSM-MNAOT #
-	#results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'WSM', 'MNAOT', graphic_result))
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'WSM', 'MNAOT', graphic_result))
+
+	# MTET-MET, LET-WSM-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'LET', 'WSM', 'WSM', graphic_result))
+
+	# MTET-MET, MNAOT-LTET-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'LTET', 'LET', graphic_result))
+
+	# MTET-MET, MNAOT-LTET-MNAOT #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'LTET', 'MNAOT', graphic_result))
+
+	# MTET-MET, MNAOT-LTET-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'LTET', 'WSM', graphic_result))
+
+	# MTET-MET, MNAOT-MNJ-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'MNJ', 'LET', graphic_result))
+
+	# MTET-MET, MNAOT-MNJ-MNAOT #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'MNJ', 'MNAOT', graphic_result))
+
+	# MTET-MET, MNAOT-MNJ-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'MNJ', 'WSM', graphic_result))
+
+	# MTET-MET, MNAOT-WSM-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'WSM', 'LET', graphic_result))
+
+	# MTET-MET, MNAOT-WSM-MNAOT #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'WSM', 'MNAOT', graphic_result))
+
+	# MTET-MET, MNAOT-WSM-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'MNAOT', 'WSM', 'WSM', graphic_result))
+
+	# MTET-MET, WSM-LTET-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'LTET', 'LET', graphic_result))
+
+	# MTET-MET, WSM-LTET-MNAOT #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'LTET', 'MNAOT', graphic_result))
+
+	# MTET-MET, WSM-LTET-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'LTET', 'WSM', graphic_result))
+
+	# MTET-MET, WSM-MNJ-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'MNJ', 'LET', graphic_result))
 
 	# MTET-MET, WSM-MNJ-MNAOT #
-	#results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'MNJ', 'MNAOT', graphic_result))
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'MNJ', 'MNAOT', graphic_result))
+
+	# MTET-MET, WSM-MNJ-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'MNJ', 'WSM', graphic_result))
+
+	# MTET-MET, WSM-WSM-LET #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'WSM', 'LET', graphic_result))
+
+	# MTET-MET, WSM-WSM-MNAOT #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'WSM', 'MNAOT', graphic_result))
+
+	# MTET-MET, WSM-WSM-WSM #
+	results.append(new.execute(num_tasks, num_cpu_threads, num_gpu_devices, loc_queue_cap, func.clear(num_tasks, task_list), deadline, 'MTET', 'MET', 'WSM', 'WSM', 'WSM', graphic_result))
 
 	# Write the results to the file #
 	file = open("output/results.dat", "a")
 
-	for j in range(0, 5):
+	for j in range(0, 31):
 		file.write(str(results[j][0]))
 		#file.write(str(results[i][0]) + "\t")
 		#file.write(str(results[i][1]))
 
-		if j != 4:
+		if j != 30:
 			file.write("\t")
 
 	if i != itr_prg - 1:
